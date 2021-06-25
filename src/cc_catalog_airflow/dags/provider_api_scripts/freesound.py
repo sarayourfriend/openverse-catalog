@@ -43,8 +43,9 @@ DEFAULT_QUERY_PARAMS = {
     'token': API_KEY,
     'query': '',
     'page_size': LIMIT,
-    'fields': 'id,url,name,tags,description,created,license,type,channels,filesize,bitrate,bitdepth,duration,'
-              'samplerate,pack,username,images,num_downloads,avg_rating,num_ratings'
+    'fields': 'id,url,name,tags,description,created,license,type,channels,'
+              'filesize,bitrate,bitdepth,duration,samplerate,pack,username,'
+              'images,num_downloads,avg_rating,num_ratings'
 }
 
 delayed_requester = DelayedRequester(DELAY)
@@ -59,7 +60,11 @@ def main():
     """
 
     logger.info("Begin: Freesound script")
-    licenses = ['Attribution', 'Attribution Noncommercial', 'Creative Commons 0']
+    licenses = [
+        'Attribution',
+        'Attribution Noncommercial',
+        'Creative Commons 0'
+    ]
     for license_name in licenses:
         image_count = _get_items(license_name)
         logger.info(f"Audios for {license_name} pulled: {image_count}")
