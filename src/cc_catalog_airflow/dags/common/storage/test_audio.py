@@ -32,14 +32,15 @@ mock_audio_args = {
     'creator': 'tyler',
     'creator_url': 'https://creatorurl.com',
     'title': 'agreatpicture',
-    'meta_data': None,
-    'raw_tags': None,
+    'meta_data': {},
+    'watermarked': None,
+    'raw_tags': {},
     'bit_rate': None,
     'sample_rate': None,
     'category': None,
-    'genre': None,
-    'audio_set': None,
-    'alt_audio_files': None,
+    'genre': [],
+    'audio_set': {},
+    'alt_audio_files': [],
     'source': 'testing_source',
     'ingestion_type': 'provider_api',
 
@@ -221,6 +222,7 @@ def default_audio_args(
         title='agreatsong',
         meta_data={"description": "cat song"},
         tags={"name": "tag1", "provider": "testing"},
+        watermarked=None,
         duration=100,
         bit_rate=None,
         sample_rate=None,
@@ -262,6 +264,10 @@ def test_create_tsv_row_creates_alt_audio_files(
         'agreatsong',
         '{"description": "cat song"}',
         '{"name": "tag1", "provider": "testing"}',
+        '\\N',
+        'testing_provider',
+        'testing_source',
+        'provider_api',
         '100',
         '\\N',
         '\\N',
@@ -271,9 +277,6 @@ def test_create_tsv_row_creates_alt_audio_files(
         '[{"url": '
         '"http://alternative.com/audio.mp3", "filesize": "123", "bit_rate": "41000", '
         '"sample_rate": "16000"}]',
-        'testing_provider',
-        'testing_source',
-        'provider_api',
 
     ]) + '\n'
     assert actual_row == expected_row
@@ -308,6 +311,10 @@ def test_create_tsv_row_creates_audio_set(
         'agreatsong',
         '{"description": "cat song"}',
         '{"name": "tag1", "provider": "testing"}',
+        '\\N',
+        'testing_provider',
+        'testing_source',
+        'provider_api',
         '100',
         '\\N',
         '\\N',
@@ -316,10 +323,6 @@ def test_create_tsv_row_creates_audio_set(
         '{"audio_set": "test_audio_set", "set_url": "test.com", '
         '"set_position": "1", "set_thumbnail": "thumbnail.jpg"}',
         '\\N',
-        'testing_provider',
-        'testing_source',
-        'provider_api',
-
     ]) + '\n'
     assert actual_row == expected_row
 
@@ -400,15 +403,13 @@ def test_create_tsv_row_handles_empty_dict_and_tags(
     test_audio = audio.Audio(**audio_args)
 
     actual_row = audio_store._create_tsv_row(test_audio).split('\t')
-    actual_meta_data, actual_tags = actual_row[12], actual_row[13]
-    for i, a in enumerate(actual_row):
-        print(f"{i}: {a}, {audio.Audio._fields[i]}, {test_audio[i]}")
-        if audio.Audio._fields[i] == 'meta_data':
+    actual_meta_data, actual_tags = None, None
+    for i, field in enumerate(audio.Audio._fields):
+        if field == 'meta_data':
             actual_meta_data = actual_row[i]
-            print(f"Meta_data: {meta_data}")
-        elif audio.Audio._fields[i] == 'tags':
+        elif field == 'tags':
             actual_tags = actual_row[i]
-            print(f"Tags: {actual_tags}")
+    assert actual_meta_data is not None and actual_tags is not None
     expect_meta_data, expect_tags = '\\N', '\\N'
     assert expect_meta_data == actual_meta_data
     assert expect_tags == actual_tags
@@ -440,6 +441,7 @@ def test_create_tsv_row_properly_places_entries(
         'title': 'agreatsong',
         'meta_data': {'description': 'a song about cat'},
         'tags': [{'name': 'tag1', 'provider': 'testing'}],
+        'watermarked': None,
         'bit_rate': 16000,
         'sample_rate': 44100,
         'category': 'music',
@@ -474,6 +476,10 @@ def test_create_tsv_row_properly_places_entries(
         'agreatsong',
         '{"description": "a song about cat"}',
         '[{"name": "tag1", "provider": "testing"}]',
+        '\\N',
+        'testing_provider',
+        'testing_source',
+        'provider_api',
         '200',
         '16000',
         '44100',
@@ -482,8 +488,5 @@ def test_create_tsv_row_properly_places_entries(
         '{"audio_set": "album", "set_position": "1", "set_url": "https://album.com/", '
         '"set_thumbnail": "https://album.com/thumbnail.jpg"}',
         '\\N',
-        'testing_provider',
-        'testing_source',
-        'provider_api'
     ]) + '\n'
     assert expect_row == actual_row

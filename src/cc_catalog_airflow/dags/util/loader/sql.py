@@ -62,7 +62,6 @@ def create_loading_table(
               {col.TITLE} character varying(5000),
               {col.META_DATA} jsonb,
               {col.TAGS} jsonb,
-              {col.WATERMARKED} boolean,
               {col.PROVIDER} character varying(80),
               {col.SOURCE} character varying(80),
               {col.INGESTION_TYPE} character varying(80),
@@ -234,7 +233,7 @@ def _clean_intermediate_table_data(
 def upsert_records_to_db_table(
         postgres_conn_id,
         identifier,
-        db_table=IMAGE_TABLE_NAME,
+        db_table=None,
         media_type='image',
 ):
     def _newest_non_null(column: str) -> str:
@@ -288,6 +287,7 @@ def upsert_records_to_db_table(
             col.REMOVED: FALSE,
             col.META_DATA: col.META_DATA,
             col.TAGS: col.TAGS,
+            col.WATERMARKED: col.WATERMARKED,
     }
     if media_type == 'audio':
         column_inserts.update({
@@ -303,7 +303,6 @@ def upsert_records_to_db_table(
         column_inserts.update({
             col.WIDTH: col.WIDTH,
             col.HEIGHT: col.HEIGHT,
-            col.WATERMARKED: col.WATERMARKED
         })
     if media_type == 'audio':
         media_specific_upsert_query = (
@@ -319,9 +318,7 @@ def upsert_records_to_db_table(
     else:
         media_specific_upsert_query = (
             f'''{_newest_non_null(col.WIDTH)},
-            {_newest_non_null(col.HEIGHT)},
-            {_newest_non_null(col.WATERMARKED)}
-            '''
+            {_newest_non_null(col.HEIGHT)}'''
         )
     upsert_query = dedent(
         f'''
@@ -346,6 +343,7 @@ def upsert_records_to_db_table(
           {_newest_non_null(col.TITLE)},
           {_merge_jsonb_objects(col.META_DATA)},
           {_merge_jsonb_arrays(col.TAGS)},
+          {_newest_non_null(col.WATERMARKED)},
           {media_specific_upsert_query}
         '''
     )
@@ -355,9 +353,12 @@ def upsert_records_to_db_table(
 def overwrite_records_in_db_table(
         postgres_conn_id,
         identifier,
-        db_table=IMAGE_TABLE_NAME,
+        db_table=None,
         media_type='image'
 ):
+    if db_table is None:
+        db_table = AUDIO_TABLE_NAME \
+            if media_type == 'audio' else IMAGE_TABLE_NAME
     load_table = _get_load_table_name(identifier, media_type=media_type)
     logger.info(f'Updating records in {db_table}.')
     postgres = PostgresHook(postgres_conn_id=postgres_conn_id)
@@ -374,6 +375,7 @@ def overwrite_records_in_db_table(
             col.TITLE,
             col.META_DATA,
             col.TAGS,
+            col.WATERMARKED,
             col.DURATION,
             col.BIT_RATE,
             col.SAMPLE_RATE,
